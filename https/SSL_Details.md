@@ -89,7 +89,7 @@ You'll then be asked for your email address. This is required by certificate pro
 
 - If an invalid email is entered, the script will ask again.
 - If `Finding_Hostname.sh` is not found, the script will display an error and exit.
-- The script uses `set -e` for early failure handling—any failure halts execution.
+- The script uses strict error handling (set -o errexit + set -o pipefail) and a trap to print error location.
 
 ---
 
