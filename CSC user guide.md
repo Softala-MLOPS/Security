@@ -2,31 +2,31 @@
 
 ## I) CSC setup
 
-1. Set up your account in [CSC](https://my.csc.fi/welcome) using HAKA Login (this might takes up to 30 minutes, so no worries if it doesn't allow you in instantly)
-2. Create a new project, you should see a button to create new project either in your dashboard pane or in your project pane (this also might takes a while)
-3. Once you had your own project you should be able to access it in your project pane
-4. When you are in your project, scroll down and there should be a tab call "Services"
-5. Add service and choose cPouta as the service to run
-6. Login in to cPouta using haka (this also will takes a while)
+1. Set up your account in [CSC](https://my.csc.fi/welcome) using HAKA Login. (This might take up to 30 minutes, so don't worry if it doesn't instantly allow you in.)
+2. Create a new project. You should see a button to create a new project either in your dashboard pane or in your project pane. (This might also take a while.)
+3. Once you have your own project, you should be able to access it through your project pane.
+4. When you are in your project, scroll down and there should be a tab called "Services".
+5. Add service and choose cPouta as the service to run.
+6. Login in to cPouta using haka. (This will take a while.)
 
 ## II) cPouta setup
 
 ### a) Security Group Setup
-1. Once you are in cPouta navigate to Security Groups: Network -> Security Groups
-2. Create a new security group (DO NOT MODIFY THE DEFAULT SECURITY GROUP IF YOU DON'T KNOW WHAT YOU ARE DOING)
-3. Once the new security group had been created you can modify the rule by press on Manage Rules
-4. Create a new rule by press on "Add Rule"
+1. Once you are in cPouta, navigate to Security Groups: Network -> Security Groups.
+2. Create a new security group (DO NOT MODIFY THE DEFAULT SECURITY GROUP IF YOU DON'T KNOW WHAT YOU ARE DOING).
+3. Once the new security group has been created, you can modify the rules by pressing "Manage Rules".
+4. Create a new rule by pressing "Add Rule".
 5. Choose SSH, HTTP and HTTPS as rules. Leave the rest as it is.
 
-For more information on what does all this step means please consult the [user guide make by CSC](https://docs.csc.fi/cloud/pouta/launch-vm-from-web-gui/#setting-up-ssh-keys)
+For more information on what these steps mean, please consult the [user guide made by CSC](https://docs.csc.fi/cloud/pouta/launch-vm-from-web-gui/#setting-up-ssh-keys).
 
 ### b) Key Pairs Setup
-1. Navigate to Key Pairs: Compute -> Key Pairs
-2. Either import SSH key pair that you had made or create a new key pair by press on Create Key Pair
-3. Name your key pair, try to name it in lower case, no space, and no special characters. Key type is SSH Key
-**Important:** The key will be save automatically to your computer once you press "Create Key Pair". This will be the only way to access the computer so don't lose it. Type file should be ".pem" for window and linux, for mac it will be ".cer"
+1. Navigate to Key Pairs: Compute -> Key Pairs.
+2. Either import a SSH key pair you have made or create a new key pair by pressing "Create Key Pair".
+3. Name your key pair - try to name it in lower case, no space, and no special characters. Key type is SSH Key.
+**Important:** The key will be saved automatically to your computer once you press "Create Key Pair". This will be the only way to access the virtual machine, so don't lose it. File type should be ".pem" for Windows and Linux, for Mac it will be ".cer"
 
-Again for more information please consult the [CSC user guide](https://docs.csc.fi/cloud/pouta/launch-vm-from-web-gui/#setting-up-ssh-keys)
+For more information please consult the [user guide made by CSC](https://docs.csc.fi/cloud/pouta/launch-vm-from-web-gui/#setting-up-ssh-keys).
 
 ### c) Instances setup
 1. Navigate to Instances: Compute -> Instances
