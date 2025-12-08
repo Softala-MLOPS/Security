@@ -1,6 +1,6 @@
 # Guide to Endpoints and Nginx Ingress
 
-This guide explains how external access to platform services is managed via Nginx Ingress Controller and how each major service (Kubeflow, MLflow, Grafana, Prometheus, Minio) is exposed. It references the ingress resources defined in this repository. While https is briefly touched upon in some parts of this document, more details on it's functionality on this platform can be found in the [https folder](https).
+This guide explains how external access to platform services is managed via Nginx Ingress Controller and how each major service (Kubeflow, MLflow, Grafana, Prometheus, Minio) is exposed. It references the ingress resources defined in this repository. While HTTPS is briefly touched upon in some parts of this document, more details on its functionality on this platform can be found in the [https folder](https/).
 
 
 ## Nginx role and functionality in the platform cluster
@@ -67,7 +67,7 @@ flowchart TB
 
 The base manifests are system-agnostic: placeholders like `DOMAIN` and `PLACEHOLDER` keep the repository portable across environments (local kind, cloud, different DNS names/issuers). In other words, bases provide upstream, reusable manifests. Overlays customize those bases for the chosen environment. This composition ensures base manifests stay portable, while env overlays inject the exact values and adjustments needed.
 
-In the case of standalone-kfp-kserver (same as the diagram above), the env file [`deployment/envs/standalone-kfp-kserve/kustomization.yaml`](deployment/envs/standalone-kfp-kserve/kustomization.yaml) aggregates:
+In the case of standalone-kfp-kserve (same as the diagram above), the env file [`deployment/envs/standalone-kfp-kserve/kustomization.yaml`](deployment/envs/standalone-kfp-kserve/kustomization.yaml) aggregates:
   - [`../../kubeflow/manifests/in-cluster-setup/standalone-kfp-kserve`](deployment/kubeflow/manifests/in-cluster-setup/standalone-kfp-kserve/kustomization.yaml) (base Kubeflow + KServe setup).
   - [`../../custom/kubeflow-custom/env/standalone-kfp-kserve`](deployment/custom/kubeflow-custom/env/standalone-kfp-kserve/) (overlay tailoring Kubeflow for this env).
   - [`../../custom/kserve-custom/env/standalone-kfp`](deployment/custom/kserve-custom/env/standalone-kfp/) (overlay tailoring KServe for standalone KFP).
@@ -85,7 +85,7 @@ These transformations can affect the inner workings of a service/application whi
 
 ## Ingress rules
 
-Here are some of the rules used in this project. See also online [NGINX Ingress Controller documentation](https://docs.nginx.com/nginx-ingress-controller/configuration/ingress-resources/basic-configuration/) for up to date details and more instructions on it's usage.
+Here are some of the rules used in this project. See also the community [Ingress-NGINX documentation](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/) for up-to-date details and more instructions on its usage. These annotations (`nginx.ingress.kubernetes.io/...`) correspond to the Kubernetes ingress-nginx controller.
 
 - Pattern: `/service(/|$)(.*)`
   - `/service` is the base prefix.
@@ -113,19 +113,17 @@ Here are some of the services, their endpoints and ingresses used in this platfo
 - This service can be found at endpoint /mlpipeline/
 - Tested to be accessible via remote browser https connection. However, there is an issue with executions tab: `Error: Failed getting executions: Unknown Content-type received.. Code: 2`
 - demo-run/wine-quality demo run through jupyter notebook shows up via browser
-- Backend service: `ml-pipeline-ui` port `3000`
 
 ### Mlflow, [mlflow-ingress.yaml](deployment/mlflow/base/mlflow-ingress.yaml)
 
 - This service can be found at endpoint /mlflow/
 - All the tabs seem to be working properly when accessed via browser and https but not much else has been tested
-- Backend service: `mlflow` port `5000`
 
 ### Grafana, [grafana-ingress.yaml](deployment/monitoring/grafana/grafana-ingress.yaml)
 
 - This service can be found at endpoint /grafana/ but redirects to grafana/login
 - This service has not been tested otherwise
-- For some reason works with /grafana also, even though /mlpipeline and /mlflow do not work.
+- Works with `/grafana` without trailing slash as well. Grafana is often prefix-aware and can be configured via `root_url` to handle subpaths even without rewrite rules.
 
 ### Prometheus, [prometheus-ingress.yaml](deployment/monitoring/prometheus/prometheus-ingress.yaml)
 
@@ -134,4 +132,4 @@ Here are some of the services, their endpoints and ingresses used in this platfo
 
 ### Minio, [minio-ingress.yaml](deployment/mlflow/minio/minio-ingress.yaml)
 
-- No testing done at all
+- No tests done for this endpoint
