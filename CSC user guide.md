@@ -68,7 +68,11 @@ Again, for more information please consult the [CSC user guide](https://docs.csc
 4. Once inside, run: `sudo apt update` and `sudo apt upgrade`.
 5. Install Docker LTS using the command: `sudo apt install docker.io`.
 6. Verify that the installation was successful by running: `docker version`.
-7. Clone the Github repository into the VM.
-8. Navigate into the cloned repository using: `cd <repo_name>`.
+7. #### TIP: To run Docker commands without sudo in later steps, add the user (ubuntu) to the docker group:
+    - 7.1. Run: `sudo usermod -aG docker <user>`.
+    - 7.2. Log out by running: `exit` or open a new terminal window, then SSH back into your VM.
+    - 7.3. Verify the change by running: `groups` (you should see `docker` listed).
+8. Clone the Github repository into the VM.
+9. Navigate into the cloned repository using: `cd <repo_name>`.
 
-9. Follow the rest of the tutorial in [Installation guide](https://github.com/Softala-MLOPS/oss-mlops-platform/blob/main/tools/CLI-tool/Installations%2C%20setups%20and%20usage.md#installations-setups-and-usage).
+10. Follow the rest of the tutorial in [Installation guide](https://github.com/Softala-MLOPS/oss-mlops-platform/blob/main/tools/CLI-tool/Installations%2C%20setups%20and%20usage.md#installations-setups-and-usage).
