@@ -1,6 +1,6 @@
 # Guide to Endpoints and Nginx Ingress
 
-This guide explains how external access to platform services is managed via Nginx Ingress Controller and how each major service (Kubeflow, MLflow, Grafana, Prometheus, Minio) is exposed. It references the ingress resources defined in this repository. While HTTPS is briefly touched upon in some parts of this document, more details on its functionality on this platform can be found in the [https folder](https/).
+This guide explains how external access to platform services is managed via Nginx Ingress Controller and how each major service (Kubeflow, MLflow, Grafana, Prometheus, Minio) is exposed. It references the ingress resources defined in this repository. HTTPS connectivity is also explained here on a higher level as it is handled by the Nginx Ingress Controller. The [https folder](https/) contains more information on the functionality of specific scripts involved in enabling HTTPS connectivity on this platform.
 
 
 ## Nginx role and functionality in the platform cluster
@@ -14,7 +14,7 @@ The MLOps platform uses an Nginx Ingress Controller to route external http(s) tr
 flowchart LR
   A[Client Browser] -- HTTPS https://DOMAIN/service/... --> B[Nginx Ingress Controller]
   B -- Match Host + Path --> C{Ingress Rules}
-  C -- /mlpipeline/ --> D[svc ml-pipeline-ui:3000]
+  C -- /mlpipeline/ --> D[svc ml-pipeline-ui:80]
   C -- /mlflow/ --> E[svc mlflow:5000]
   C -- /grafana/ --> F[svc grafana:3000]
   C -- /prometheus/ --> G[svc prometheus-service:8080]
@@ -31,13 +31,11 @@ Kustomize is a Kubernetes-native configuration management tool (integrated part 
 
 The diagram below visualizes the process in the case of [deployment/envs/standalone-kfp-kserve/kustomization.yaml](deployment/envs/standalone-kfp-kserve/kustomization.yaml).
 
-:exclamation: Due to mermaid syntax issues the topmost path in the diagram below is incorrect (deployment/envs/standalone_kfp_kserve/kustomization.yaml). It should be deployment/envs/standalone-kfp-kserve/kustomization.yaml. :exclamation:
-
-#### Kustomize resource aggregation from base manifests, overlays and environment files
+#### Kustomize resource aggregation from base manifests, overlays and environment files; deployment/envs/standalone-kfp-kserve/kustomization.yaml
 
 ```mermaid
 flowchart TB
-  subgraph ENV[deployment/envs/standalone_kfp_kserve/kustomization.yaml]
+  subgraph ENV[base]
     E1[resources:
     ../../kubeflow/.../standalone-kfp-kserve
     ../../custom/kubeflow-custom/env/standalone-kfp-kserve
@@ -77,15 +75,38 @@ These in turn can contain additional resources.
 
 ## Path-based routing and rewrites
 
-As the http(s) request comes from a client browser into the nginx ingress controller, it is sometimes transformed at the ingress in order to reach the requested service and enable the service's internal functions to work correctly.
+As the HTTPS request comes from a client browser into the Nginx Ingress Controller, it is sometimes transformed at the ingress in order to reach the requested service and enable the service's internal functions to work correctly.
 
-- Example: Client browser requests `https://DOMAIN/mlpipeline/` → nginx ingress controller receives the request and forwards it to kubeflow pipeline as `/`.
+- Example: Client browser requests `https://DOMAIN/mlpipeline/` → Nginx Ingress Controller receives the request and forwards it to the correct service, kubeflow pipeline, in the cluster as `/`.
 
 These transformations can affect the inner workings of a service/application which can be very application specific. If something isn't working, the ingress rules modifying these are a good place to take a look at. See under the heading [Ingress rules](#ingress-rules) for more details.
 
-## Ingress rules
+## Ingress rules and annotations
 
-Here are some of the rules used in this project. See also the community [Ingress-NGINX documentation](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/) for up-to-date details and more instructions on its usage. These annotations (`nginx.ingress.kubernetes.io/...`) correspond to the Kubernetes ingress-nginx controller.
+Here are some of the rules and annotations used in this project. See also the community [Ingress-NGINX documentation](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/) for up-to-date details and more instructions on its usage.
+
+Annotations control how the ingress-nginx controller configures Nginx for a given `Ingress`. They add behavior that is not expressed in the base Kubernetes `spec`—for example URL rewrites, authentication, caching, timeouts, CORS, and TLS redirection. Annotations are evaluated by the controller when it renders the Nginx config; when multiple ingresses apply to the same host/path, more specific rules and annotations typically take precedence. Prefer setting annotations on the smallest-scoped `Ingress` that needs the behavior to avoid unintended side effects on other paths. These annotations (`nginx.ingress.kubernetes.io/...`) correspond to the Kubernetes ingress-nginx controller.
+
+- `nginx.ingress.kubernetes.io/rewrite-target: /$2`
+  - This removes the `/service` prefix before forwarding to the backend, so a request to `/mlflow/experiments` becomes `/experiments` at the MLflow service.
+  - Benefits: Host multiple apps behind a single domain under distinct subpaths without requiring the app to be aware of the prefix.
+  - Example translations:
+    - `https://DOMAIN/mlpipeline/` → backend request `/`
+    - `https://DOMAIN/grafana/dashboards` → backend request `/dashboards`
+    - `https://DOMAIN/prometheus/api/v1/query` → backend request `/api/v1/query`
+  - Some services like Grafana seem to be prefix-aware and adjust internally to work even without this, but Kubeflow pipelines and mlflow at least seems to need this to be adjusted in the ingress rules.
+
+- `nginx.ingress.kubernetes.io/use-regex: "true"`
+  - Enables regex matching for `spec.rules.http.paths[*].path`. When set, the controller treats the path as a PCRE regex and exposes capture groups (e.g., `$1`, `$2`) that can be referenced in `rewrite-target`.
+  - Pair with `pathType: ImplementationSpecific` for full regex support. `Prefix` and `Exact` path types do not support regex semantics.
+  - Pitfalls: Overly broad patterns can match unintended paths. Anchor patterns appropriately (e.g., `^/service(/|$)(.*)`), and ensure trailing-slash variants are handled.
+
+- `nginx.ingress.kubernetes.io/ssl-redirect: "true"`
+  - Forces HTTP traffic to redirect to HTTPS (301/308) for the ingress host/path. Useful to ensure secure transport and consistent URLs.
+  - Interaction with controller settings: Some setups enable global SSL redirect; per-ingress annotation allows fine-grained control, including disabling with `"false"` for health endpoints if necessary.
+  - Backends may also issue redirects; prefer letting the ingress enforce HTTPS so clients upgrade before reaching the application.
+
+Rules define how requests are matched and routed: each `Ingress` rule combines a `host` with one or more `paths`. A request matches when both host and path conditions are satisfied. `pathType` determines matching semantics—`Prefix` for hierarchical prefixes, `Exact` for strict equality, and `ImplementationSpecific` for controller-defined behavior (regex supported with ingress-nginx). After a match, any active annotations (rewrite, auth, CORS, timeouts) are applied, and the request is proxied to the specified `Service` port. Rewrites change the URI seen by the backend, which is essential when hosting apps under subpaths; ensure the app is configured to generate relative links or respect a base path to avoid broken assets.
 
 - Pattern: `/service(/|$)(.*)`
   - `/service` is the base prefix.
@@ -93,16 +114,54 @@ Here are some of the rules used in this project. See also the community [Ingress
   - `(.*)` captures the remainder of the request path, which becomes regex group `$2` for rewrite.
     - Needs to have `annotations:
     nginx.ingress.kubernetes.io/use-regex: "true"` for regex to work.
+    - During testing, the functionality of this has been questioned as `/service` doesn't seem to always work, even with this enabled.
   
 
-- Rewrite: `nginx.ingress.kubernetes.io/rewrite-target: /$2`
-  - This removes the `/service` prefix before forwarding to the backend, so a request to `/mlflow/experiments` becomes `/experiments` at the MLflow service.
-  - Benefits: Host multiple apps behind a single domain under distinct subpaths without requiring the app to be aware of the prefix.
-  - Example translations:
-    - `https://DOMAIN/mlpipeline/` → backend request `/`
-    - `https://DOMAIN/grafana/dashboards` → backend request `/dashboards`
-    - `https://DOMAIN/prometheus/api/v1/query` → backend request `/api/v1/query`
-  - Some services like Grafana seem to be prefix aware and adjust internally to work even without this but Kubeflow pipelines and mlflow at least seems to need this to be adjusted in the ingress rules.
+## How HTTPS Works
+
+This platform terminates TLS at the Nginx Ingress Controller. External clients connect over `https://DOMAIN/...`, the ingress presents the TLS certificate, and then proxies traffic to services inside the cluster over plain HTTP.
+
+ Certificate source: Certificates and keys are provided as Kubernetes `Secret` resources referenced by each `Ingress` via the `tls` section. See the detailed steps and options in the [https docs](https/) — for example [`https/Installation_setup.md`](https/Installation_setup.md), [`https/SSL_Creation_guide.md`](https/SSL_Creation_guide.md), and [`https/Creating_ssl_certificate.md`](https/Creating_ssl_certificate.md).
+ 
+ DNS and hostnames: The `DOMAIN` placeholder in manifests must resolve to the ingress controller’s public IP. Update your DNS A/AAAA records accordingly. The same `DOMAIN` is used in all `Ingress` hosts to serve multiple apps under path prefixes (`/mlpipeline`, `/mlflow`, etc.).
+
+TLS termination: Nginx Ingress uses the certificate from the `Secret` to terminate HTTPS and forward to backend services. Backends typically listen on HTTP (e.g., `mlflow:5000`, `grafana:3000`).
+
+ HTTP→HTTPS redirect: You can enforce HTTPS by setting `nginx.ingress.kubernetes.io/ssl-redirect: "true"` on ingresses. Some environments enable global redirect at the controller level.
+
+ Self-signed vs CA: For local/testing, a self-signed certificate can be created using the script [`scripts/SSL_Creation.sh`](scripts/SSL_Creation.sh) and the [https guides](https/). For production, obtain certificates from a trusted CA. If you use your own CA, distribute the CA certificate to client machines/browsers (see [`https/Certificate_authority.md`](https/Certificate_authority.md)).
+- Secret management: Store certs as `tls` secrets in the relevant namespace. Example:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mlflow-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  tls:
+  - hosts:
+    - DOMAIN
+    secretName: domain-tls-secret
+  rules:
+  - host: DOMAIN
+    http:
+      paths:
+      - path: /mlflow(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: mlflow
+            port:
+              number: 5000
+```
+
+Troubleshooting tips:
+- Certificate not trusted: Verify the certificate chain and that `DOMAIN` matches the certificate’s Common Name/SANs. This issue is common when using Let's Encrypt production environment. See Let's Encrypt rate limits at https://letsencrypt.org/docs/rate-limits/ for more details and consider using their staging environment: https://letsencrypt.org/docs/staging-environment/.
+- Mixed content or redirects: Check rewrite rules and app base URLs (e.g., Grafana `root_url`) to ensure subpath hosting works over HTTPS.
+- Wrong secret namespace: The `tls` secret must exist in the same namespace as the `Ingress`.
+- Host mismatch: The browser `Host` must match the `Ingress` `spec.rules.host` and `spec.tls.hosts` entry.
 
 ## Platform endpoint information and current status
 
