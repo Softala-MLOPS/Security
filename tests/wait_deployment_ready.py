@@ -22,7 +22,8 @@ CLUSTER_NAME = os.getenv("CLUSTER_NAME")
 assert CLUSTER_NAME is not None
 CONTEXT_NAME = f"kind-{CLUSTER_NAME}"
 
-subprocess.run(["kubectl", "config", "use-context", CONTEXT_NAME], stdout=True)
+# Switch kubectl context; suppress output but don't raise if it fails here
+subprocess.run(["kubectl", "config", "use-context", CONTEXT_NAME], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def all_pods_ready(namespace: str):

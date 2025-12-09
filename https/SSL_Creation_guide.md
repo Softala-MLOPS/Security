@@ -11,6 +11,58 @@ The script performs the following:
 - Applies the appropriate SSL configuration based on the `INSTALL_TYPE` (local or cloud)
 - Supports both Let's Encrypt and ZeroSSL as providers
 
+## Prerequisites
+
+1. Ensure `config.env` exists at the project root.
+2. Kubernetes cluster is running and `kubectl` is configured.
+3. Internet access to pull cert-manager manifests from GitHub.
+4. You have run the `SSL_Details.sh` script first to generate the configuration.
+
+## Configuration File (`config.env`)
+
+Required keys:
+- `INSTALL_TYPE`: either `local` or `cloud`
+- `SSL_PROVIDER`: `letsencrypt` or `zerossl` (only for cloud)
+- `EMAIL`: contact email
+- `ZEROSSL_EAB_HMAC_KEY` and `ZEROSSL_ACCESS_KEY_ID` (only for ZeroSSL)
+
+## Running the Script
+
+```bash
+chmod +x SSL_Creation.sh
+./SSL_Creation.sh
+```
+
+## What the Script Does
+
+1. Environment setup: ensures `config.env` is present and sources it.
+2. cert-manager cleanup: deletes existing cert-manager resources and waits for removal.
+3. cert-manager installation: installs CRDs and base resources, temporarily disabling webhooks.
+4. SSL Configuration (Cloud Only): applies provider-specific overlay manifests and re-enables webhooks.
+5. Secret creation (ZeroSSL): creates `zerossl-eab-secret` with the HMAC key.
+
+## Troubleshooting
+
+- Missing `config.env`: Ensure you ran the `SSL_Details.sh` script.
+- Overlay not found: Confirm overlay directory exists under `cert-manager/overlay/{provider}`.
+- Webhook errors: Script disables/enables webhooks; re-run if needed.
+
+## Notes
+
+- This script is designed for modular SSL setup as part of the platform deployment pipeline.
+# SSL Creation Script Guide
+
+This guide explains how to use the `SSL_Creation.sh` script to set up SSL for your Kubernetes cluster using cert-manager.
+
+## Overview
+
+The script performs the following:
+- Validates and sources the configuration from `config.env`
+- Installs or re-installs `cert-manager`
+- Disables and re-enables cert-manager webhooks to ensure compatibility
+- Applies the appropriate SSL configuration based on the `INSTALL_TYPE` (local or cloud)
+- Supports both Let's Encrypt and ZeroSSL as providers
+
 ---
 
 ## 📁 Prerequisites
@@ -82,10 +134,56 @@ At the end, you will see:
 - **Overlay not found**: Confirm the directory exists under `cert-manager/overlay/{provider}`.
 - **Webhook errors**: The script handles webhook issues by disabling/re-enabling them. Retry if needed.
 
----
+# SSL Creation Script Guide
 
-## ✅ Notes
+This guide explains how to use the `SSL_Creation.sh` script to set up SSL for your Kubernetes cluster using cert-manager.
 
-- This script is designed for **modular SSL setup** in a microservices-based Kubernetes deployment.
-- It is part of a broader platform deployment pipeline and works best when run in sequence with the setup scripts.
+## Overview
+
+The script performs the following:
+- Validates and sources the configuration from `config.env`
+- Installs or re-installs `cert-manager`
+- Disables and re-enables cert-manager webhooks to ensure compatibility
+- Applies the appropriate SSL configuration based on the `INSTALL_TYPE` (local or cloud)
+- Supports both Let's Encrypt and ZeroSSL as providers
+
+## Prerequisites
+
+1. Ensure `config.env` exists at the project root.
+2. Kubernetes cluster is running and `kubectl` is configured.
+3. Internet access to pull cert-manager manifests from GitHub.
+4. You have run the `SSL_Details.sh` script first to generate the configuration.
+
+## Configuration File (`config.env`)
+
+Required keys:
+- `INSTALL_TYPE`: either `local` or `cloud`
+- `SSL_PROVIDER`: `letsencrypt` or `zerossl` (only for cloud)
+- `EMAIL`: contact email
+- `ZEROSSL_EAB_HMAC_KEY` and `ZEROSSL_ACCESS_KEY_ID` (only for ZeroSSL)
+
+## Running the Script
+
+```bash
+chmod +x SSL_Creation.sh
+./SSL_Creation.sh
+```
+
+## What the Script Does
+
+1. Environment setup: ensures `config.env` is present and sources it.
+2. cert-manager cleanup: deletes existing cert-manager resources and waits for removal.
+3. cert-manager installation: installs CRDs and base resources, temporarily disabling webhooks.
+4. SSL Configuration (Cloud Only): applies provider-specific overlay manifests and re-enables webhooks.
+5. Secret creation (ZeroSSL): creates `zerossl-eab-secret` with the HMAC key.
+
+## Troubleshooting
+
+- Missing `config.env`: Ensure you ran the `SSL_Details.sh` script.
+- Overlay not found: Confirm overlay directory exists under `cert-manager/overlay/{provider}`.
+- Webhook errors: Script disables/enables webhooks; re-run if needed.
+
+## Notes
+
+- This script is designed for modular SSL setup as part of the platform deployment pipeline.
 

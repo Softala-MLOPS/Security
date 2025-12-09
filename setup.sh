@@ -226,6 +226,27 @@ while true; do
   if kubectl apply -f "$tmp_file"; then
       echo "Resources successfully applied."
       rm "$tmp_file"
+
+      # Wait for the cluster resources (all namespaces) to become ready.
+      # Timeout (in minutes) can be set via WAIT_TIMEOUT_MINUTES in config.env, default 60.
+      WAIT_TIMEOUT_MINUTES=${WAIT_TIMEOUT_MINUTES:-60}
+      echo
+      echo "Waiting up to ${WAIT_TIMEOUT_MINUTES} minutes for all pods to become ready..."
+
+      # Ensure python-dotenv is available for the readiness script (it is minimal).
+      if ! python3 -c "import dotenv" &> /dev/null; then
+          echo "Installing python-dotenv (required for readiness checker)..."
+          pip3 install python-dotenv
+      fi
+
+      # Run the readiness checker (will raise on timeout)
+      if python3 "$SCRIPT_DIR/tests/wait_deployment_ready.py" --timeout "$WAIT_TIMEOUT_MINUTES"; then
+          echo "All pods reported ready."
+      else
+          echo "Timed out waiting for pods to become ready. Check 'kubectl get pods --all-namespaces' for details." >&2
+          exit 1
+      fi
+
       break
   else
       echo
