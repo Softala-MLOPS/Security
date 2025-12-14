@@ -122,12 +122,13 @@ For local deployments, SSL configuration is not required as the platform runs on
 
 ## Choosing Between Let's Encrypt and ZeroSSL
 
-### Let's Encrypt
+### Let's Encrypt (Recommended)
 - **Recommended** for most deployments
 - Simple configuration (only requires email)
 - No additional account setup needed
 - Widely trusted and battle-tested
 - Free automated SSL certificates
+- Confirmed to work reliably with this platform
 
 ### ZeroSSL
 - Requires External Account Binding (EAB) credentials
@@ -136,8 +137,9 @@ For local deployments, SSL configuration is not required as the platform runs on
   - Access Key ID
 - Good alternative if you need CA diversity
 - Also provides free SSL certificates
+- **Note**: There may be API issues with ZeroSSL integration. Use with caution and test thoroughly.
 
-**Note**: Both providers are fully supported by the platform's scripts and will automatically renew certificates before expiration.
+**Recommendation**: Use Let's Encrypt unless you have specific requirements for ZeroSSL. Let's Encrypt has been thoroughly tested and works reliably with this platform.
 
 ## Troubleshooting
 
